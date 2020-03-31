@@ -150,7 +150,6 @@ class Session implements IUserSession, Emitter {
 		$this->lockdownManager = $lockdownManager;
 		$this->logger = $logger;
 		$this->dispatcher = $dispatcher;
-		$this->userManager = $userManager;
 	}
 
 	/**
@@ -472,15 +471,7 @@ class Session implements IUserSession, Emitter {
 
 				$throttler->registerAttempt('login', $request->getRemoteAddress(), ['user' => $user]);
 
-				$uid = $user;
-				Util::emitHook(
-					'\OCA\Files_Sharing\API\Server2Server',
-					'preLoginNameUsedAsUserName',
-					['uid' => &$uid]
-				);
-				if($this->manager->userExists($uid)) {
-					$this->dispatcher->dispatchTyped(new LoginFailedEvent($uid));
-				}
+				$this->dispatcher->dispatchTyped(new OC\Authentication\Events\LoginFailed($user));
 
 				if ($currentDelay === 0) {
 					$throttler->sleepDelay($request->getRemoteAddress(), 'login');

@@ -25,6 +25,7 @@ declare(strict_types=1);
 
 namespace OC\Authentication\Login;
 
+use OC\Authentication\Events\LoginFailed;
 use OC\Core\Controller\LoginController;
 use OCP\Authentication\Events\LoginFailedEvent;
 use OCP\EventDispatcher\IEventDispatcher;
@@ -41,10 +42,9 @@ class LoggedInCheckCommand extends ALoginCommand {
 	/** @var IUserManager */
 	private $userManager;
 
-	public function __construct(ILogger $logger, IEventDispatcher $dispatcher, IUserManager $userManager) {
+	public function __construct(ILogger $logger, IEventDispatcher $dispatcher) {
 		$this->logger = $logger;
 		$this->dispatcher = $dispatcher;
-		$this->userManager = $userManager;
 	}
 
 	public function process(LoginData $loginData): LoginResult {
@@ -54,15 +54,7 @@ class LoggedInCheckCommand extends ALoginCommand {
 
 			$this->logger->warning("Login failed: $loginName (Remote IP: $ip)");
 
-			$uid = $loginName;
-			Util::emitHook(
-				'\OCA\Files_Sharing\API\Server2Server',
-				'preLoginNameUsedAsUserName',
-				['uid' => &$uid]
-			);
-			if($this->userManager->userExists($uid)) {
-				$this->dispatcher->dispatchTyped(new LoginFailedEvent($uid));
-			}
+			$this->dispatcher->dispatchTyped(new LoginFailed($loginName));
 
 			return LoginResult::failure($loginData, LoginController::LOGIN_MSG_INVALIDPASSWORD);
 		}
